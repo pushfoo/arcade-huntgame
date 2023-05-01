@@ -3,12 +3,12 @@ name = "huntgame"
 version = "0.0.1"
 
 authors = [
-    {name = "pushfoo" , email="pushfoo@gmail.com"}
+    {name = "pushfoo"}
 ]
 
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 dependencies = [
-    "arcade==3.0.0.dev18"
+    "arcade==3.0.0.dev20"
 ]
 
 [project.scripts]
