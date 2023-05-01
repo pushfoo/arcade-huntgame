@@ -8,8 +8,10 @@ authors = [
 
 requires-python = ">=3.8"
 dependencies = [
-    "arcade==3.0.0.dev20"
+    "arcade==3.0.0.dev20",
+    "loguru==0.7.0"
 ]
+
 
 [project.scripts]
 huntgame = "huntgame.__main__:main"

@@ -1,13 +1,16 @@
-from typing import Optional, Dict, Callable, Any
+from collections import deque
+from typing import Optional, Dict, Callable, Deque
 
+import pyglet
 import arcade
-from arcade import Window
+from arcade import Window, View
 from arcade.color import BLACK
-from arcade.gui import UIManager, UIWidget, UIAnchorLayout, UILabel, UIBoxLayout
+from arcade.gui import UIManager, UIAnchorLayout, UILabel, UIBoxLayout
 from arcade.types import Color
 
+from huntgame.utils import CallTemplate, DeferredCall
 
-ChoiceDefs = Dict[str, Callable[[UIWidget, Any], None]]
+from loguru import logger
 
 
 class HelperView(arcade.View):
@@ -41,11 +44,57 @@ class HelperView(arcade.View):
         self.ui.draw()
 
 
-# class MenuScreen(ChoiceScreen):
-#     def __init__(self):
-#         super().__init__("", {
-#             "New Game": lambda a:
-#         })
+class StackWindow(arcade.Window):
+
+    def __init__(
+        self,
+        base_view_spec: Optional[CallTemplate] = None,
+        defer_seconds: float = 0.1,
+        **kwargs  # Should actually mirror the constructor here.
+    ):
+        """
+        A window with a stack for views.
+
+        :param view_spec: How to build the base view, if any.
+        :param defer_seconds: How long to wait for the window to initialize
+        :param kwargs: Any other args the Window can take
+        """
+        super().__init__(**kwargs)
+
+        self._base_view: Optional[View] = None
+        self._view_stack: Deque[View] = deque()
+        if base_view_spec:
+            self._pending_deferred_call: Optional[DeferredCall] =\
+                base_view_spec if isinstance(base_view_spec, DeferredCall) else DeferredCall(*base_view_spec)
+
+            pyglet.clock.schedule_once(self._handle_deferred_view, defer_seconds)
+            logger.debug(
+                'Scheduled: {}s until deferred view creation of {}', defer_seconds, self._pending_deferred_call)
+        else:
+            logger.debug('No view scheduled.')
+
+    def _handle_deferred_view(self, elapsed: float = None) -> None:
+        if self._pending_deferred_call:
+            logger.debug(
+                '{} elapsed, processing scheduled view call {} ',
+                elapsed, self._pending_deferred_call)
+
+            self.base_view = self._pending_deferred_call()
+            self.show_view(self._base_view)
+            self._pending_deferred_call = None
+        else:
+            logger.debug('{} elapsed, skipping initialization due to lack of call', elapsed)
+
+    @property
+    def base_view(self) -> Optional[HelperView]:
+        return self._base_view
+
+    @base_view.setter
+    def base_view(self, view: HelperView):
+        self._base_view = view
+
+
+ChoiceDefs = Dict[str, Callable]
 
 
 class ChoiceScreen(HelperView):
@@ -105,5 +154,4 @@ class ChoiceScreen(HelperView):
         self.ui.add(self.anchor_widget)
 
         self._initialized = True
-
 
